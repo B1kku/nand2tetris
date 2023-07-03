@@ -42,16 +42,16 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-   // Put you code here:
-   Not16(in=false, out=notZero);
-   Not16(in=x, out=notx);
-   Not16(in=y, out=noty);
-   Mux4Way16(a=x, b=notx, c=false, d=notZero, sel[1]=zx, sel[0]=nx, out=selx);
-   Mux4Way16(a=y, b=noty, c=false, d=notZero, sel[1]=zy, sel[0]=ny, out=sely);
-   Add16(a=selx, b=sely, out=xaddy);
-   And16(a=selx, b=sely, out=xandy);
-   Not16(in=xaddy, out=notxaddy);
-   Not16(in=xandy, out=notxandy);
-   Mux4Way16(a=xandy, b=notxandy, c=xaddy, d=notxaddy, sel[1]=f, sel[0]=no, out=result, out=out, out[15]=ng);
-   IsZero16(in=result, out=zr);
+
+    Not16(in=false, out=notZero);
+    Not16(in=x, out=notx);
+    Not16(in=y, out=noty);
+    Mux4Way16(a=x, b=notx, c=false, d=notZero, sel[1]=zx, sel[0]=nx, out=selx);
+    Mux4Way16(a=y, b=noty, c=false, d=notZero, sel[1]=zy, sel[0]=ny, out=sely);
+    Add16(a=selx, b=sely, out=xaddy);
+    And16(a=selx, b=sely, out=xandy);
+    Not16(in=xaddy, out=notxaddy);
+    Not16(in=xandy, out=notxandy);
+    Mux4Way16(a=xandy, b=notxandy, c=xaddy, d=notxaddy, sel[1]=f, sel[0]=no, out=result, out=out, out[15]=ng);
+    IsZero16(in=result, out=zr);
 }

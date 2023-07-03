@@ -16,5 +16,13 @@ CHIP PC {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    // If inc, inc out, else n.
+    Inc16(in=n, out=incn);
+    Mux16(a=n, b=incn, sel=inc, out=isinc);
+    // If load, out = in, else isinc.
+    Mux16(a=isinc, b=in, sel=load, out=isload);
+    // If reset, out = 0, else isinc.
+    Mux16(a=isload, b=false, sel=reset, out=mode);
+    // Set mode always on.
+    Register(in=mode, load=true, out=out, out=n);
 }
