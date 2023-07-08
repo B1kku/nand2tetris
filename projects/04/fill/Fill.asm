@@ -13,34 +13,38 @@
 (START)
 @SCREEN
 D = A
-@addr //Addr holds the initial screen's address
+@addr //Addr iterates over the screen addresses.
 M = D
-(ITERATE)
+@KBD
+D = M
+@SETBLACK //If keyboard key not 0, set black
+D;JNE
+@SETWHITE //Else set white
+0;JMP
+(FILL)
 @addr
 D = M
-//If addr is <= than KBD
+//If addr is >= than KBD(screen end) then fill is done, restart.
 @KBD
 D = D - A
 @START
 D;JGE
-@KBD //If key pressed, set color to black
+@color //Store color on D.
 D = M
-@BLACK
-D;JNE
-@color //Else, white
-M = 0
-(COLORDONE)
-@color
-D = M
-@addr //Set address to addr value, make that black.
+@addr //Move address register to addr pointer.
 A = M
-M = D
+M = D //Set the screen portion to saved color.
 @addr
-M = M + 1
-@ITERATE
+M = M + 1 //Increment the screen address by 1.
+@FILL //Keep filling.
 0;JMP
-(BLACK)
+(SETBLACK)
 @color
 M = -1
-@COLORDONE
+@FILL
+0;JMP
+(SETWHITE)
+@color
+M = 0
+@FILL
 0;JMP
