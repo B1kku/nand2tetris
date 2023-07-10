@@ -39,5 +39,41 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    /*
+    Instruction PIN
+    [0] OP: 0==A instruction (A records ins[14]);
+    
+    */
+    Not(in=instruction[15], out=NotOP);
+    //When op(D type instruction), and d1(A), A is selected as destination, therefore it's loaded from ALU.
+    And(a=instruction[15], b=instruction[5], out=d1);
+    // A is registering when OP is A(0) or A is selected.
+    Or(a=NotOP, b=d1, out=Aload);
+    // Select whether A's input is the instruction or ALU's out(when it's selected to store data).
+    Mux16(a=instruction, b=ALUOut, sel=d1, out=Adata);
+    ARegister(in=Adata, load=Aload, out=A, out[0..14]=addressM);
+    //Select whether ALU will use A or M based on a instruction (pin 12)
+    And(a=instruction[15], b=instruction[12], out=OPanda);
+    Mux16(a=A, b=inM, sel=OPanda, out=AM);
+
+    //writeM --d3
+    And(a=instruction[15], b=instruction[3], out=writeM);
+    
+    //D Register, registering when op 1 and D is destination.
+    And(a=instruction[15], b=instruction[4], out=d2);
+    DRegister(in=ALUOut, load=d2, out=D);
+
+    ALU(x=D, y=AM, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=ALUOut, out=outM, zr=zr, ng=ng);
+
+    // -- PC Load logic --
+    And(a=ng, b=instruction[2], out=j1);
+    And(a=zr, b=instruction[1], out=j2);
+    Not(in=zr, out=NotZero);
+    Not(in=ng, out=NotNegative);
+    And(a=NotZero, b=NotNegative, out=positive);
+    And(a=positive, b=instruction[0], out=j3);
+    Or(a=j1, b=j2, out=j1orj2);
+    Or(a=j1orj2, b=j3, out=isjump);
+    And(a=isjump, b=instruction[15], out=jump);
+    PC(in=A, load=jump, inc=true, reset=reset, out[0..14]=pc);
 }
