@@ -15,7 +15,7 @@
  * available through the out output from the next time step onward.
  * Address space rules:
  * Only the upper 16K+8K+1 words of the Memory chip are used. 
- * Access to address>0x6000 is invalid. Access to any address in 
+ * Access to address>0x6000 is invalid. Access to any address in
  * the range 0x4000-0x5FFF results in accessing the screen memory 
  * map. Access to address 0x6000 results in accessing the keyboard 
  * memory map. The behavior in these addresses is described in the 
@@ -27,5 +27,15 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    /* First bit determines whether RAM(0) or screen/keyboard(1) memory are selected */
+    /* 2nd further filters  between screen(0) and keyboard(1) */
+    RAM16K(in=in, load=RAMLoad, address=address[0..13], out=RAMOut);
+    Screen(in=in, load=screenLoad, address=address[0..12], out=screenOut);
+    Keyboard(out=keyboardOut);
+    /* In order to choose we split the load input to a 3WayDMux that filters which one gets the input of the load */
+    DMux(in=load, sel=address[14], a=RAMLoad, b=skbLoad);
+    DMux(in=skbLoad, sel=address[13], a=screenLoad, b=isKeyboard);
+    /* Use 3WayMux to generate a single output based on the selected register */
+    Mux16(a=RAMOut, b=skbOut, sel=address[14], out=out);
+    Mux16(a=screenOut, b=keyboardOut, sel=address[13], out=skbOut);
 }

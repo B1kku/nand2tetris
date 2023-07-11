@@ -39,41 +39,49 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    /*
-    Instruction PIN
-    [0] OP: 0==A instruction (A records ins[14]);
-    
-    */
-    Not(in=instruction[15], out=NotOP);
-    //When op(D type instruction), and d1(A), A is selected as destination, therefore it's loaded from ALU.
-    And(a=instruction[15], b=instruction[5], out=d1);
-    // A is registering when OP is A(0) or A is selected.
-    Or(a=NotOP, b=d1, out=Aload);
-    // Select whether A's input is the instruction or ALU's out(when it's selected to store data).
-    Mux16(a=instruction, b=ALUOut, sel=d1, out=Adata);
-    ARegister(in=Adata, load=Aload, out=A, out[0..14]=addressM);
-    //Select whether ALU will use A or M based on a instruction (pin 12)
-    And(a=instruction[15], b=instruction[12], out=OPanda);
-    Mux16(a=A, b=inM, sel=OPanda, out=AM);
+    /*--  Instruction PINS    --
+    [15] OP: 0=A | 1=D. Decides how to use the instruction, A saves it into A as a number, D turns it into Register(s)=Operation;JUMP.
+    [14..13] null
+    [12] a: 0=A | 1=M. A or M[A] is used as the ALU input.
+    [11..6] c1-c6: Control the ALU's behaviour, NX, ZX, NY, ZY...
+    [5..3] d1-d3: d1=A | d2=D | d3=M. Tells the respective memory to register the current value from ALU.
+    [2..0] j1-j3: j1=- | j2=0 | j3=+. Decides whether PC jumps to A address in ROM, compares D operation to 0.
+    --                      --*/
+    /* -- A Register -- Holds a value and is used as address for M or ROM or as an int for ALU. */
+    ARegister(in=dataA, load=loadA, out=A, out[0..14]=addressM);
+    /* Will register instruction as number when notOP, or from ALU when d1 and OP are on. Fed as address to RAM. */
+    Not(in=instruction[15], out=notOP);
+    And(a=instruction[15], b=instruction[5], out=d1); // d1
+    Mux16(a=instruction, b=ALUOut, sel=d1, out=dataA);
+    Or(a=notOP, b=d1, out=loadA);
 
-    //writeM --d3
-    And(a=instruction[15], b=instruction[3], out=writeM);
-    
-    //D Register, registering when op 1 and D is destination.
-    And(a=instruction[15], b=instruction[4], out=d2);
+    /* -- D Register -- Holds a value from ALU, used as a sort of cache to hold a value between instructions without A side effects. */
     DRegister(in=ALUOut, load=d2, out=D);
+    /* Will register when OP and d2 are on. */
+    And(a=instruction[15], b=instruction[4], out=d2); // d2
 
+    /* d3 is fed out to memory to signal the RAM to register the value */
+    And(a=instruction[15], b=instruction[3], out=writeM); //d3
+
+    /* -- ALU -- Carries out operations, fed all the control bits in order 11-6, and 2 values, (A or M) and D*/
+    /* It can add numbers or it can do -1, simply output only X (in order to feed and register x(D) into A or M), etc... */
     ALU(x=D, y=AM, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=ALUOut, out=outM, zr=zr, ng=ng);
+    /* a bit decides whether ALU operates on A or M */
+    Mux16(a=A, b=inM, sel=OPanda, out=AM);
+    And(a=instruction[15], b=instruction[12], out=OPanda);
 
-    // -- PC Load logic --
+    /* -- ProgramCounter -- Selects the ROM address, by default it will keep adding 1 to itself, */
+    PC(in=A, load=jump, inc=true, reset=reset, out[0..14]=pc);
+    /* As it needs jump logic we check every condition and it's pin, for positive we check if zr and ng are off */
     And(a=ng, b=instruction[2], out=j1);
     And(a=zr, b=instruction[1], out=j2);
+    And(a=positive, b=instruction[0], out=j3);
+    And(a=NotZero, b=NotNegative, out=positive);
     Not(in=zr, out=NotZero);
     Not(in=ng, out=NotNegative);
-    And(a=NotZero, b=NotNegative, out=positive);
-    And(a=positive, b=instruction[0], out=j3);
+
+    /* If OP on and any of the checks, then load A into PC */
+    And(a=isjump, b=instruction[15], out=jump);
     Or(a=j1, b=j2, out=j1orj2);
     Or(a=j1orj2, b=j3, out=isjump);
-    And(a=isjump, b=instruction[15], out=jump);
-    PC(in=A, load=jump, inc=true, reset=reset, out[0..14]=pc);
 }
